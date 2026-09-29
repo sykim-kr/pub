@@ -1,0 +1,264 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>업무 일지 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: 헤더 → KPI 띠 → 도넛 2개 + 영역 막대 → 일자별 추세 → 주별 추세 → 히트맵 → 해석 */
+:root{
+  color-scheme:light;
+  --bg:#f5f6f4; --surface:#fcfcfb; --ink:#161816; --ink2:#535650; --ink3:#7d8079; --line:#e1e3de; --grid:#eceee9;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948; --neutral:#a9aca4;
+  --heat0:#eef1ee; --warn-bg:#fdf3dc; --warn-ink:#6b4a00;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif; --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#121312; --surface:#1a1a19; --ink:#f2f3ef; --ink2:#c3c2b7; --ink3:#8f9088; --line:#2f312d; --grid:#262825;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --neutral:#6d706a;
+  --heat0:#232523; --warn-bg:#2b2412; --warn-ink:#e8cf8f;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#121312; --surface:#1a1a19; --ink:#f2f3ef; --ink2:#c3c2b7; --ink3:#8f9088; --line:#2f312d; --grid:#262825;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --neutral:#6d706a;
+  --heat0:#232523; --warn-bg:#2b2412; --warn-ink:#e8cf8f;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:6px;padding-bottom:4px}
+.eyebrow{font:500 12px var(--f-num);letter-spacing:.08em;color:var(--ink3);text-transform:uppercase}
+h1{margin:0;font-size:clamp(24px,4vw,32px);line-height:1.2;font-weight:700;text-wrap:balance}
+.sub{margin:0;color:var(--ink2);max-width:70ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;min-width:0}
+h2{margin:0 0 2px;font-size:15px;font-weight:600}
+.note{margin:0 0 12px;color:var(--ink3);font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi b{font:500 28px/1.15 var(--f-num);letter-spacing:-.02em}
+.kpi b small{font-size:14px;color:var(--ink3);margin-left:2px}
+.kpi span{font-size:12.5px;color:var(--ink2)}
+.row{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.donutbox{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.donutbox svg{flex:0 0 auto;width:190px;height:190px}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;flex:1 1 150px;min-width:0}
+.legend li{display:flex;align-items:center;gap:8px;font-size:13px}
+.legend i{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
+.legend em{font:400 12.5px var(--f-num);font-style:normal;color:var(--ink2);margin-left:auto;white-space:nowrap}
+.scroll{overflow-x:auto}
+.scroll>svg{display:block}
+svg text{font-family:var(--f-num);fill:var(--ink3);font-size:11px}
+svg .lab{font-family:var(--f-body);fill:var(--ink2);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink2);font:500 12.5px var(--f-body);padding:5px 10px;border-radius:999px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip:hover{border-color:var(--ink3)}
+.chip:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.chip.off{opacity:.45}
+.chip.off i{background:transparent!important;outline:1px solid var(--ink3)}
+.keys{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink2);margin-top:8px}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--surface);padding:7px 10px;border-radius:6px;font-size:12px;line-height:1.5;max-width:260px;opacity:0;transition:opacity .08s}
+#tip b{font-weight:600}
+#tip .n{font-family:var(--f-num)}
+.ins{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));margin:0;padding:0;list-style:none}
+.ins li{border-top:1px solid var(--line);padding-top:10px}
+.ins strong{display:block;font-size:13.5px;margin-bottom:2px}
+.ins span{color:var(--ink2);font-size:13px}
+.caveat{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 16px;font-size:12.5px}
+table.tv{border-collapse:collapse;width:100%;font-size:12.5px}
+table.tv th,table.tv td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--f-num)}
+table.tv th:first-child,table.tv td:first-child{text-align:left;font-family:var(--f-body)}
+details summary{cursor:pointer;color:var(--ink2);font-size:13px}
+@media (prefers-reduced-motion:reduce){#tip{transition:none}}
+</style>
+</head><body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">대한의료봉사회 · 담당자 업무 일지 · 7/1–9/28</div>
+  <h1>업무 일지 대시보드</h1>
+  <p class="sub">7~9월 일지 70일을 업무 영역 13개로 나눠, 어떤 일이 얼마나 자주, 어느 시기에 나타났는지 봅니다. 수치는 시간이 아니라 일지에 그 업무가 언급된 날 수입니다.</p>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<section class="row">
+  <div class="card"><h2>업무 영역 비중</h2><p class="note">6개 묶음별 언급 횟수(영역 13개의 언급일 합계) 비율</p><div class="donutbox"><svg id="donut1" viewBox="0 0 190 190" role="img" aria-label="업무 영역 묶음별 비중 도넛 차트"></svg><ul class="legend" id="leg1"></ul></div></div>
+  <div class="card"><h2>하루의 성격</h2><p class="note">일지 제목의 표기로 나눈 70일의 구성</p><div class="donutbox"><svg id="donut2" viewBox="0 0 190 190" role="img" aria-label="근무 유형 비중 도넛 차트"></svg><ul class="legend" id="leg2"></ul></div></div>
+</section>
+
+<section class="card"><h2>영역별 언급일</h2><p class="note">70일 중 해당 업무가 언급된 날. 막대 색은 위 도넛의 묶음과 같습니다.</p><div class="scroll"><svg id="bars" role="img" aria-label="업무 영역 13개의 언급일 막대 차트"></svg></div></section>
+
+<section class="card">
+  <h2>일자별 추세</h2>
+  <p class="note">기록된 날마다 하나의 점. 굵은 선은 최근 7개 기록일의 이동평균입니다. 점 위에 올리면 그날 언급된 영역이 나옵니다.</p>
+  <div class="chips" id="metricChips" role="group" aria-label="지표 선택"></div>
+  <div class="scroll"><svg id="daily" role="img" aria-label="일자별 추세선"></svg></div>
+  <div class="keys"><span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="var(--s7)"/></svg>활동일</span><span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="var(--surface)" stroke="var(--ink3)" stroke-width="1.5"/></svg>그 외 기록일</span><span><svg width="22" height="12"><line x1="1" y1="6" x2="21" y2="6" stroke="var(--s1)" stroke-width="2.5"/></svg>7일 이동평균</span></div>
+</section>
+
+<section class="card">
+  <h2>주별 추세</h2>
+  <p class="note">한 주(월요일 시작) 동안 묶음별로 쌓인 언급 횟수. 묶음을 눌러 켜고 끌 수 있습니다.</p>
+  <div class="chips" id="grpChips" role="group" aria-label="묶음 선택"></div>
+  <div class="scroll"><svg id="weekly" role="img" aria-label="묶음별 주간 추세선"></svg></div>
+</section>
+
+<section class="card">
+  <h2>영역 × 주 히트맵</h2>
+  <p class="note">칸 안의 숫자는 그 주에 해당 업무가 언급된 날 수(최대 6). 진할수록 자주 나온 주입니다.</p>
+  <div class="scroll"><svg id="heat" role="img" aria-label="업무 영역과 주별 언급일 히트맵"></svg></div>
+</section>
+
+<section class="card"><h2>읽을거리</h2><ul class="ins" id="ins"></ul></section>
+
+<div class="caveat" id="cav"></div>
+
+<section class="card"><details><summary>표로 보기 (월별 언급일)</summary><div class="scroll" style="margin-top:10px"><table class="tv" id="tv"></table></div></details></section>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const RAW=[["07-01","水","-",151,"0010100001010"],["07-02","木","-",256,"1101000001100"],["07-03","金","A",376,"0001000010001"],["07-04","土","-",56,"0000001000001"],["07-06","月","-",166,"0000001000011"],["07-07","火","A",223,"0001000001000"],["07-08","水","-",204,"1000000001000"],["07-09","木","A",206,"0001000000000"],["07-10","金","H",262,"0001011011010"],["07-11","土","G",92,"0000000000001"],["07-13","月","-",224,"0000000001010"],["07-14","火","H",390,"0010000101100"],["07-15","水","-",297,"0000100011110"],["07-16","木","A",600,"0101000011110"],["07-17","金","-",15,"0000000000010"],["07-20","月","-",475,"1000001001011"],["07-21","火","A",362,"1001000000010"],["07-22","水","-",205,"1100100001000"],["07-23","木","A",252,"0001000000000"],["07-24","金","H",358,"1111000001000"],["07-25","土","B",76,"0000000000000"],["07-27","月","-",218,"1010000000001"],["07-28","火","A",274,"0001001000000"],["07-29","水","A",265,"0001001000000"],["07-30","木","H",153,"0011000001000"],["07-31","金","H",138,"0000001111010"],["08-01","土","-",137,"0000000011010"],["08-03","月","H",128,"0001100011011"],["08-04","火","-",353,"0000100111100"],["08-05","水","-",217,"0000100101101"],["08-06","木","H",175,"0000000011111"],["08-07","金","H",66,"0000000001001"],["08-08","土","B",77,"0000000000000"],["08-10","月","-",150,"0000010001111"],["08-11","火","-",380,"0001011011111"],["08-12","水","H",201,"0000000110011"],["08-13","木","-",333,"0000000000011"],["08-14","金","-",472,"0000100101011"],["08-15","土","-",43,"0000000110000"],["08-17","月","-",137,"0000000000010"],["08-18","火","-",18,"1000000000000"],["08-19","水","-",242,"0010000001010"],["08-20","木","A",292,"0010000001100"],["08-21","金","-",437,"0000100001101"],["08-22","土","-",98,"0000010101010"],["08-24","月","H",459,"1100011011010"],["08-25","火","H",296,"1010100001010"],["08-26","水","-",467,"0110101001100"],["08-27","木","A",259,"0001000000000"],["08-28","金","-",2235,"0110000001101"],["08-29","土","B",51,"0000000000000"],["08-31","月","-",271,"1010100001010"],["09-01","火","A",294,"0011000000000"],["09-02","水","A",300,"0011000000000"],["09-03","木","A",126,"0010000000000"],["09-04","金","A",188,"0001000000000"],["09-07","月","-",640,"0010000001110"],["09-08","火","-",414,"1000001101110"],["09-09","水","-",228,"1000001001100"],["09-10","木","A",208,"0001000000000"],["09-11","金","A",210,"0001000000000"],["09-12","土","G",148,"0011000000000"],["09-14","月","-",190,"1010001010010"],["09-15","火","A",325,"0111000000000"],["09-18","金","-",404,"0000100110110"],["09-19","土","B",159,"0001000000100"],["09-21","月","-",121,"0000000001010"],["09-22","火","-",101,"0000000101100"],["09-23","水","H",134,"0000000011000"],["09-28","月","-",920,"1110001001101"]];
+const AREAS=[["활동 안내·역할 공지",0],["명찰 제작",0],["공로장·증명서 발급",0],["활동 후 사진·루틴 공지",0],["신청자 취합·분류",1],["출석부 반영",1],["결과 데이터·보고서",2],["카드뉴스·후기",3],["영상 편집",3],["CS·문의 응대",4],["협력기관·제안서",4],["단원 운영·충원",5],["법인·명부 서류",5]];
+const GROUPS=[["활동 전후 문서","--s1"],["참여자 데이터","--s2"],["성과·보고","--s3"],["콘텐츠","--s4"],["소통·성장","--s5"],["운영·행정","--s6"]];
+const TYPES={A:["활동일","--s7"],H:["재택","--s3"],B:["보육원","--s5"],G:["총회","--s8"],"-":["무표기","--neutral"]};
+const DOW={"日":0,"月":1,"火":2,"水":3,"木":4,"金":5,"土":6},DOWK=["일","월","화","수","목","금","토"];
+const days=RAW.map(([md0,dw,tag,len,f])=>{const md=md0.replace("-","");const [m,d]=[+md.slice(0,2),+md.slice(2)];const dt=new Date(2026,m-1,d);return{m,d,dt,dw:DOWK[DOW[dw]],tag,len,f:f.split("").map(Number),n:f.split("").reduce((a,b)=>a+ +b,0)}});
+const N=days.length,sum=a=>a.reduce((x,y)=>x+y,0);
+const areaDays=AREAS.map((_,i)=>sum(days.map(r=>r.f[i])));
+const grpCount=GROUPS.map((_,g)=>sum(AREAS.map((a,i)=>a[1]===g?areaDays[i]:0)));
+const totalMentions=sum(grpCount);
+const $=id=>document.getElementById(id),NS="http://www.w3.org/2000/svg";
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+const css=v=>"var("+v+")";
+const tip=$("tip");
+function showTip(html,x,y){tip.innerHTML=html;tip.style.opacity=1;const w=tip.offsetWidth,h=tip.offsetHeight;let l=x+14,t=y+14;if(l+w>innerWidth-8)l=x-w-14;if(t+h>innerHeight-8)t=y-h-14;tip.style.left=Math.max(8,l)+"px";tip.style.top=Math.max(8,t)+"px"}
+function hideTip(){tip.style.opacity=0}
+const fmt=d=>d.dt.getMonth()+1+"/"+d.d+" ("+d.dw+")";
+
+/* KPI */
+const actN=days.filter(r=>r.tag==="A").length,hN=days.filter(r=>r.tag==="H").length;
+const avgA=sum(days.filter(r=>r.tag==="A").map(r=>r.n))/actN,avgH=sum(days.filter(r=>r.tag==="H").map(r=>r.n))/hN;
+[[N,"일","기록된 날 (7/1–9/28)"],[areaDays[9],"일","CS·문의 언급일 ("+Math.round(areaDays[9]/N*100)+"%)"],[actN,"일","활동일 (평균 "+avgA.toFixed(1)+"개 영역)"],[hN,"일","재택일 (평균 "+avgH.toFixed(1)+"개 영역)"],[(sum(days.map(r=>r.n))/N).toFixed(1),"개","하루 평균 언급 영역"]].forEach(k=>{const d=document.createElement("div");d.className="kpi";d.innerHTML="<b>"+k[0]+"<small>"+k[1]+"</small></b><span>"+k[2]+"</span>";$("kpis").appendChild(d)});
+
+/* Donut */
+function donut(svgId,legId,items,centerBig,centerSmall){
+  const svg=$(svgId),cx=95,cy=95,R=86,r=54,tot=sum(items.map(i=>i.v));let a0=-Math.PI/2;
+  items.forEach(it=>{const a1=a0+it.v/tot*Math.PI*2,lg=a1-a0>Math.PI?1:0;
+    const p=[cx+R*Math.cos(a0),cy+R*Math.sin(a0),cx+R*Math.cos(a1),cy+R*Math.sin(a1),cx+r*Math.cos(a1),cy+r*Math.sin(a1),cx+r*Math.cos(a0),cy+r*Math.sin(a0)];
+    const path=el("path",{d:`M${p[0]} ${p[1]}A${R} ${R} 0 ${lg} 1 ${p[2]} ${p[3]}L${p[4]} ${p[5]}A${r} ${r} 0 ${lg} 0 ${p[6]} ${p[7]}Z`,fill:css(it.c),stroke:"var(--surface)","stroke-width":2},svg);
+    const h=e=>showTip("<b>"+it.k+"</b><br><span class='n'>"+it.v+"</span> · "+Math.round(it.v/tot*100)+"%",e.clientX,e.clientY);
+    path.addEventListener("pointermove",h);path.addEventListener("pointerleave",hideTip);a0=a1});
+  const t1=el("text",{x:cx,y:cy+2,"text-anchor":"middle",style:"font-size:26px;fill:var(--ink);font-weight:500"},svg);t1.textContent=centerBig;
+  const t2=el("text",{x:cx,y:cy+20,"text-anchor":"middle"},svg);t2.textContent=centerSmall;
+  items.forEach(it=>{const li=document.createElement("li");li.innerHTML="<i style='background:"+css(it.c)+"'></i>"+it.k+"<em>"+it.v+" · "+Math.round(it.v/tot*100)+"%</em>";$(legId).appendChild(li)});
+}
+donut("donut1","leg1",GROUPS.map((g,i)=>({k:g[0],v:grpCount[i],c:g[1]})).sort((a,b)=>b.v-a.v),totalMentions,"언급 합계");
+const typeCnt={};days.forEach(r=>typeCnt[r.tag]=(typeCnt[r.tag]||0)+1);
+donut("donut2","leg2",Object.keys(typeCnt).map(k=>({k:TYPES[k][0],v:typeCnt[k],c:TYPES[k][1]})).sort((a,b)=>b.v-a.v),N,"기록일");
+
+/* Bars */
+(function(){
+  const svg=$("bars"),rows=AREAS.map((a,i)=>({i,name:a[0],g:a[1],v:areaDays[i]})).sort((a,b)=>b.v-a.v);
+  const W=720,rh=26,L=150,Rm=60,H=rows.length*rh+8;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);svg.style.minWidth="520px";
+  const sc=v=>v/N*(W-L-Rm);
+  rows.forEach((r,k)=>{const y=k*rh+4;
+    el("text",{x:L-10,y:y+15,"text-anchor":"end",class:"lab"},svg).textContent=r.name;
+    const w=Math.max(2,sc(r.v));
+    const bar=el("path",{d:`M${L} ${y+3}H${L+w-4}Q${L+w} ${y+3} ${L+w} ${y+7}V${y+15}Q${L+w} ${y+19} ${L+w-4} ${y+19}H${L}Z`,fill:css(GROUPS[r.g][1])},svg);
+    el("text",{x:L+w+8,y:y+15,style:"fill:var(--ink)"},svg).textContent=r.v+"일 · "+Math.round(r.v/N*100)+"%";
+    const hit=el("rect",{x:0,y:y-2,width:W,height:rh,fill:"transparent"},svg);
+    hit.addEventListener("pointermove",e=>showTip("<b>"+r.name+"</b><br>"+GROUPS[r.g][0]+"<br><span class='n'>"+r.v+"</span>일 / "+N+"일",e.clientX,e.clientY));hit.addEventListener("pointerleave",hideTip);
+  });
+})();
+
+/* Daily trend */
+let metric="n";
+const mvavg=(arr,k)=>arr.map((_,i)=>{const s=arr.slice(Math.max(0,i-k+1),i+1);return sum(s)/s.length});
+function drawDaily(){
+  const svg=$("daily");svg.innerHTML="";
+  const W=1000,H=300,L=44,Rt=16,T=14,B=34;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);svg.style.minWidth="640px";
+  const t0=new Date(2026,6,1).getTime(),t1=new Date(2026,8,29).getTime();
+  const X=dt=>L+(dt.getTime()-t0)/(t1-t0)*(W-L-Rt);
+  const vals=days.map(r=>metric==="n"?r.n:r.len),ymaxRaw=Math.max(...vals);
+  const step=metric==="n"?2:500,ymax=Math.ceil(ymaxRaw/step)*step;const Y=v=>T+(1-v/ymax)*(H-T-B);
+  for(let v=0;v<=ymax;v+=step){el("line",{x1:L,x2:W-Rt,y1:Y(v),y2:Y(v),stroke:"var(--grid)"},svg);el("text",{x:L-8,y:Y(v)+4,"text-anchor":"end"},svg).textContent=v}
+  [[7,1],[8,1],[9,1]].forEach(([m,d])=>{const x=X(new Date(2026,m-1,d));el("line",{x1:x,x2:x,y1:T,y2:H-B,stroke:"var(--line)"},svg);el("text",{x,y:H-B+18,"text-anchor":"start",dy:0,style:"fill:var(--ink2)"},svg).textContent=m+"월"});
+  [8,15,22].forEach(d=>{});
+  el("text",{x:2,y:9,"text-anchor":"start"},svg).textContent=metric==="n"?"영역 수":"글자 수";
+  const ma=mvavg(vals,7);
+  el("polyline",{points:days.map((r,i)=>X(r.dt)+","+Y(vals[i])).join(" "),fill:"none",stroke:"var(--ink3)","stroke-width":1,opacity:.45},svg);
+  el("polyline",{points:days.map((r,i)=>X(r.dt)+","+Y(ma[i])).join(" "),fill:"none",stroke:"var(--s1)","stroke-width":2.5,"stroke-linejoin":"round","stroke-linecap":"round"},svg);
+  const g=el("g",{},svg);
+  days.forEach((r,i)=>{const act=r.tag==="A";el("circle",{cx:X(r.dt),cy:Y(vals[i]),r:act?5:4,fill:act?"var(--s7)":"var(--surface)",stroke:act?"var(--surface)":"var(--ink3)","stroke-width":act?2:1.5},g)});
+  const ex=days[days.length-1],ex_i=days.length-1;el("circle",{cx:X(ex.dt),cy:Y(ma[ex_i]),r:4,fill:"var(--s1)",stroke:"var(--surface)","stroke-width":2},svg);
+  const t=el("text",{x:X(ex.dt)-8,y:Y(ma[ex_i])-10,"text-anchor":"end",style:"fill:var(--ink)"},svg);t.textContent=ma[ex_i].toFixed(metric==="n"?1:0);
+  const cross=el("line",{y1:T,y2:H-B,stroke:"var(--ink3)","stroke-dasharray":"3 3",opacity:0},svg);
+  const hit=el("rect",{x:L,y:T,width:W-L-Rt,height:H-T-B,fill:"transparent"},svg);
+  hit.addEventListener("pointermove",e=>{const b=svg.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*W;let bi=0,bd=1e9;days.forEach((r,i)=>{const dd=Math.abs(X(r.dt)-px);if(dd<bd){bd=dd;bi=i}});const r=days[bi];
+    cross.setAttribute("x1",X(r.dt));cross.setAttribute("x2",X(r.dt));cross.setAttribute("opacity",1);
+    const names=AREAS.filter((a,i)=>r.f[i]).map(a=>a[0]).join(", ")||"해당 없음";
+    showTip("<b>"+fmt(r)+"</b> · "+TYPES[r.tag][0]+"<br>언급 영역 <span class='n'>"+r.n+"</span>개 · 분량 <span class='n'>"+r.len+"</span>자<br>"+names,e.clientX,e.clientY)});
+  hit.addEventListener("pointerleave",()=>{cross.setAttribute("opacity",0);hideTip()});
+}
+[["n","언급된 영역 수"],["len","일지 분량 (글자 수)"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="chip";b.textContent=l;b.setAttribute("aria-pressed",k===metric);b.onclick=()=>{metric=k;[...$("metricChips").children].forEach(c=>c.setAttribute("aria-pressed",c===b));drawDaily()};$("metricChips").appendChild(b)});
+drawDaily();
+
+/* Weekly */
+const weekStart=dt=>{const d=new Date(dt);d.setDate(d.getDate()-((d.getDay()+6)%7));d.setHours(0,0,0,0);return d.getTime()};
+const wkKeys=[...new Set(days.map(r=>weekStart(r.dt)))].sort((a,b)=>a-b);
+const wkIdx=Object.fromEntries(wkKeys.map((k,i)=>[k,i]));
+const wkGrp=GROUPS.map(()=>wkKeys.map(()=>0)),wkArea=AREAS.map(()=>wkKeys.map(()=>0)),wkDays=wkKeys.map(()=>0);
+days.forEach(r=>{const w=wkIdx[weekStart(r.dt)];wkDays[w]++;AREAS.forEach((a,i)=>{if(r.f[i]){wkGrp[a[1]][w]++;wkArea[i][w]++}})});
+const wkLab=k=>{const d=new Date(k);return d.getMonth()+1+"/"+d.getDate()};
+const on=new Set(GROUPS.map((_,i)=>i));
+function drawWeekly(){
+  const svg=$("weekly");svg.innerHTML="";const W=1000,H=290,L=44,Rt=24,T=14,B=30;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);svg.style.minWidth="640px";
+  const vis=[...on];const ymax=Math.max(4,Math.ceil(Math.max(...vis.flatMap(g=>wkGrp[g]),1)/2)*2);
+  const X=i=>L+i/(wkKeys.length-1)*(W-L-Rt),Y=v=>T+(1-v/ymax)*(H-T-B);
+  for(let v=0;v<=ymax;v+=2){el("line",{x1:L,x2:W-Rt,y1:Y(v),y2:Y(v),stroke:"var(--grid)"},svg);el("text",{x:L-8,y:Y(v)+4,"text-anchor":"end"},svg).textContent=v}
+  wkKeys.forEach((k,i)=>{if(i%2===0)el("text",{x:X(i),y:H-8,"text-anchor":"middle"},svg).textContent=wkLab(k)});
+  el("text",{x:2,y:9,"text-anchor":"start"},svg).textContent="언급 수";
+  vis.forEach(g=>{el("polyline",{points:wkGrp[g].map((v,i)=>X(i)+","+Y(v)).join(" "),fill:"none",stroke:css(GROUPS[g][1]),"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"},svg);
+    const last=wkKeys.length-1;el("circle",{cx:X(last),cy:Y(wkGrp[g][last]),r:3.5,fill:css(GROUPS[g][1]),stroke:"var(--surface)","stroke-width":2},svg)});
+  const cross=el("line",{y1:T,y2:H-B,stroke:"var(--ink3)","stroke-dasharray":"3 3",opacity:0},svg);
+  const hit=el("rect",{x:L-10,y:T,width:W-L-Rt+20,height:H-T-B,fill:"transparent"},svg);
+  hit.addEventListener("pointermove",e=>{const b=svg.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*W;const i=Math.max(0,Math.min(wkKeys.length-1,Math.round((px-L)/(W-L-Rt)*(wkKeys.length-1))));
+    cross.setAttribute("x1",X(i));cross.setAttribute("x2",X(i));cross.setAttribute("opacity",1);
+    showTip("<b>"+wkLab(wkKeys[i])+" 주</b> · 기록 <span class='n'>"+wkDays[i]+"</span>일<br>"+vis.map(g=>"<span style='color:inherit'>"+GROUPS[g][0]+"</span> <span class='n'>"+wkGrp[g][i]+"</span>").join("<br>"),e.clientX,e.clientY)});
+  hit.addEventListener("pointerleave",()=>{cross.setAttribute("opacity",0);hideTip()});
+}
+GROUPS.forEach((g,i)=>{const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed","true");b.innerHTML="<i style='background:"+css(g[1])+"'></i>"+g[0];
+  b.onclick=()=>{if(on.has(i)){if(on.size===1)return;on.delete(i)}else on.add(i);const p=on.has(i);b.setAttribute("aria-pressed",p);b.classList.toggle("off",!p);drawWeekly()};$("grpChips").appendChild(b)});
+drawWeekly();
+
+/* Heatmap */
+(function(){
+  const svg=$("heat"),cw=58,ch=26,L=150,T=26,W=L+wkKeys.length*cw+8,H=T+AREAS.length*ch+8;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);
+  const mx=Math.max(...wkArea.flat());
+  wkKeys.forEach((k,i)=>el("text",{x:L+i*cw+cw/2,y:16,"text-anchor":"middle"},svg).textContent=wkLab(k));
+  AREAS.forEach((a,r)=>{el("text",{x:L-10,y:T+r*ch+ch/2+4,"text-anchor":"end",class:"lab"},svg).textContent=a[0];
+    wkKeys.forEach((k,i)=>{const v=wkArea[r][i],x=L+i*cw,y=T+r*ch;
+      const rect=el("rect",{x:x+1,y:y+1,width:cw-2,height:ch-2,rx:3,fill:v?css("--s1"):css("--heat0"),"fill-opacity":v?(.18+.82*v/mx).toFixed(2):1},svg);
+      if(v){el("text",{x:x+cw/2,y:y+ch/2+4,"text-anchor":"middle",style:"fill:"+(v/mx>.5?"#fff":"var(--ink)")+";font-size:11px"},svg).textContent=v}
+      rect.addEventListener("pointermove",e=>showTip("<b>"+a[0]+"</b><br>"+wkLab(k)+" 주 · 기록 "+wkDays[i]+"일 중 <span class='n'>"+v+"</span>일",e.clientX,e.clientY));rect.addEventListener("pointerleave",hideTip)});
+  });
+})();
+
+/* Insights */
+const mon=m=>days.filter(r=>r.m===m),avgN=m=>sum(mon(m).map(r=>r.n))/mon(m).length;
+const csM=[7,8,9].map(m=>sum(mon(m).map(r=>r.f[9])));
+const adm=[7,8,9].map(m=>sum(mon(m).map(r=>r.f[11]+r.f[12])));
+const ins=[
+ ["CS·문의가 가장 자주 나옵니다","70일 중 "+areaDays[9]+"일("+Math.round(areaDays[9]/N*100)+"%). 7월 "+csM[0]+"일, 8월 "+csM[1]+"일, 9월 "+csM[2]+"일로 매달 1위입니다. 답변 기준을 정리할 자료(FAQ)가 필요한 영역입니다."],
+ ["활동일은 오히려 가볍고, 재택일이 무겁습니다","활동일은 하루 평균 "+avgA.toFixed(1)+"개 영역, 재택일은 "+avgH.toFixed(1)+"개입니다. 활동 당일은 현장 운영에 쓰이고, 밀린 공지·문서·행정은 재택일에 몰립니다."],
+ ["8월에 일이 가장 넓게 퍼졌습니다","하루 평균 언급 영역이 7월 "+avgN(7).toFixed(1)+"개, 8월 "+avgN(8).toFixed(1)+"개, 9월 "+avgN(9).toFixed(1)+"개입니다. 8월에는 단원 운영·법인 서류가 함께 늘었습니다(합계 "+adm[0]+" → "+adm[1]+" → "+adm[2]+"일)."],
+ ["활동 전후 문서는 꾸준히 반복됩니다","사진·루틴 공지 "+areaDays[3]+"일, 활동 안내·역할 공지 "+areaDays[0]+"일. 활동이 있는 주마다 나타나 자동화 효과가 가장 안정적으로 쌓이는 묶음입니다("+Math.round(grpCount[0]/totalMentions*100)+"%)."]
+];
+ins.forEach(([t,s])=>{const li=document.createElement("li");li.innerHTML="<strong>"+t+"</strong><span>"+s+"</span>";$("ins").appendChild(li)});
+$("cav").innerHTML="읽는 법: 일지에 업무 키워드가 적힌 날을 세었으므로 소요 시간이 아닙니다. 9월은 9/28까지이고, 날짜 제목이 없는 일부 날은 제외했습니다. 앞선 PPT의 CS 61일은 4~9월 134일 기준이며, 이 대시보드의 CS·문의 "+areaDays[9]+"일은 7~9월만 세고 '문의' 키워드를 포함한 값입니다. 연락처·계정·금액 등 개인정보는 집계에 쓰지 않았습니다.";
+
+/* Table */
+(function(){const t=$("tv");let h="<tr><th>영역</th><th>7월</th><th>8월</th><th>9월</th><th>합계</th></tr>";
+  AREAS.forEach((a,i)=>{const m=[7,8,9].map(x=>sum(mon(x).map(r=>r.f[i])));h+="<tr><td>"+a[0]+"</td><td>"+m.join("</td><td>")+"</td><td>"+sum(m)+"</td></tr>"});
+  h+="<tr><td>기록일</td><td>"+[7,8,9].map(m=>mon(m).length).join("</td><td>")+"</td><td>"+N+"</td></tr>";t.innerHTML=h})();
+</script></body></html>
